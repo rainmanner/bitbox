@@ -1,0 +1,1012 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, minimum-scale=1">
+
+    <title>BitBox02 threat model</title>
+    <meta name="description" content="A technical explanation of attack vectors and our countermeasures.">
+    
+    <meta property="og:url" content="https://bitbox.swiss/bitbox02/threat-model/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="BitBox02 threat model">
+    <meta property="og:description" content="A technical explanation of attack vectors and our countermeasures.">
+    <meta property="og:image" content="https://bitbox.swiss/assets/images/ogp/bitbox02.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:alt" content="BitBox hardware wallet by Shift Crypto 🇨🇭">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@BitBoxSwiss">
+    <meta name="shareaholic:site_id" content="e396fde12729739dd21c1c353d3824df">
+
+    <link rel="stylesheet" href="../../css/style-5be5ccb7cb255209021244a18a03acb3.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin="" href="../../assets/fonts/LabGrotesque-Light.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin="" href="../../assets/fonts/LabGrotesque-Medium.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin="" href="../../assets/fonts/LabGrotesque-Regular.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin="" href="../../assets/fonts/LabGrotesque-Bold.woff2">
+
+    <link rel="canonical" href="index.htm">
+    <link rel="icon" type="image/png" href="../../assets/favicons/favicon-16-d855b508794aedfa82bf2c1ad17a6371.png" sizes="16x16">
+    <link rel="icon" type="image/png" href="../../assets/favicons/favicon-32-ac50b330e4a9e0c2f1029693b005acfe.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="../../assets/favicons/favicon-96-a198e78759904fdc23fe0a2e933c9f81.png" sizes="96x96">
+    <link rel="icon" type="image/png" href="../../assets/favicons/favicon-128-a8250210de58806e99d2f00ec2a27db4.png" sizes="128x128">
+    <link rel="icon" type="image/png" href="../../assets/favicons/favicon-196-060e1d0479b2f05e2d7d62ea65974dc6.png" sizes="196x196">
+
+    <link rel="alternate" href="index.htm" hreflang="en">
+
+    <link rel="alternate" href="https://bitbox.swiss/de/bitbox02/bedrohungsmodell/" hreflang="de">
+    
+    <link rel="alternate" href="https://bitbox.swiss/es/bitbox02/modelado-de-amenazas/" hreflang="es">
+
+    <link rel="alternate" href="index.htm" hreflang="x-default">
+    <script>
+      window.removeUniqueParams = function(href) {
+          var url = (href instanceof URL) ? href : new URL(href, location);
+          url.searchParams.delete('u');
+          return url.href;
+        };
+    </script>
+    <script defer="" data-domain="shiftcrypto.ch" src="../../js/script.tagged-events.local.js"></script>
+<script>window.plausible = window.plausible || function() { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
+
+    <script async="" src="../../gtag/js?id=G-R8HC9TD273"></script>
+<script>
+  // check if userId stored in localStorage or url
+  var pattern = /^[a-zA-Z0-9-]+$/;
+  var gauid = localStorage.getItem('gauid') || new URLSearchParams(location.search).get('u');
+
+  if (gauid && pattern.test(gauid)) {
+    // gauid exists and fulfills requirements
+    window.gauid = gauid;
+  } else {
+    // userId does not exist, create new, random userID
+    window.gauid = (window.crypto && crypto.getRandomValues(new Uint8Array(10)).join(''))
+      || Math.floor(Math.random() * 10000000000000000).toString();
+  }
+
+  // store the userId
+  localStorage.setItem('gauid', window.gauid);
+
+  function getTestGroupFromId(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash &= hash; // convert to 32bit integer
+    }
+    return hash & 1 ? 'b' : 'a';
+  }
+  var testGroup = getTestGroupFromId(window.gauid);
+
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-R8HC9TD273', {
+    anonymize_ip: true,
+    user_id: window.gauid,
+    transport_type: 'beacon',
+    dimension1: testGroup // A/B testing
+  });
+  gtag('config', 'AW-601847851', {
+      anonymize_ip: true,
+      user_id: window.gauid,
+      transport_type: 'beacon',
+      dimension1: testGroup // A/B testing
+    });
+
+  window.addEventListener('error', function(error) {
+    gtag('event', error.message, {
+      event_category: 'Error',
+      event_label: error.filename + ':(' + error.lineno + ':' + error.colno + ')'
+    });
+    plausible('Error',{ 
+      props: { 
+        source_url: removeUniqueParams(location.href),
+        message: error.message,
+        event_label: error.filename + ':(' + error.lineno + ':' + error.colno + ')' 
+      } 
+    });
+  });
+
+  setTimeout(function() {
+    document.documentElement.classList.add('group-' + testGroup);
+  }, 0);
+</script>
+
+  </head>
+  <body>
+    
+
+    
+      
+      
+      
+      
+      
+    
+    <div id="nav" class="nav-container">
+      <div class="content-width row">
+        <nav class="nav-content col-xs-12">
+          <div class="logo">
+            <a href="/">
+              <span class="sr-only">BitBox</span>
+              <svg version="1.1" xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewbox="0 0 512 512" xml:space="preserve">
+  <path style="fill:#191919" d="M105.8 347.4v-82.9l67-28.8V106.6l66.6-29.1v212zM406.2 348.1v-82.8l-67-28.9V107.3l-66.6-28.9v211.8zM256.2 318.5L123 376.7l133.1 57.8 133.6-58.1z"></path>
+</svg>
+
+            </a>
+          </div>
+            <ul class="nav-menu">
+              <li>
+                <a href="../index.htm">Hardware wallet</a>
+              </li>
+              <li>
+                <a href="../reviews/index.htm">Reviews</a>
+              </li>
+              <li class="active">
+                <a href="../security-features/index.htm">Security</a>
+              </li>
+              <li>
+                <a href="/app/">App</a>
+              </li>
+            </ul>
+            <ul class="cart-menu text-right">
+              <li><a href="/blog/">Blog</a></li>
+              <li><a href="/support/">Support</a></li>
+              <li><a href="https://bitbox.shop/en/">Shop</a></li>
+              <li class="nav-dropdown">
+                <input type="checkbox" id="language-toggle" tabindex="0">
+                <label for="language-toggle" class="nav-dropdown-toggle" aria-haspopup="true" aria-owns="language-menu">
+                  <span>
+                    Languages
+                  </span>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewbox="0 0 24 24" fill="none" stroke="currentColor" strokewidth="2" strokelinecap="round" strokelinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                  </svg>
+                </label>
+                <div class="nav-dropdown-content shadow">
+                  <span class="sr-only">Languages</span>
+                  <ul id="language-menu">
+                    
+                    
+                    <li lang="en"><a class="active" href="index.htm">English</a></li>
+                    
+
+                    
+                    
+                    <li lang="de"><a href="/de/bitbox02/bedrohungsmodell/">Deutsch</a></li>
+                    
+
+                    
+                    
+                    <li lang="es"><a href="/es/bitbox02/modelado-de-amenazas/">Español</a></li>
+                    
+                  </ul>
+                </div>
+              </li>
+            </ul>
+            <div class="mobile-container hide">
+              <ul class="mobile-menu shadow" id="mobile-nav">
+                <li>
+                  <a href="../index.htm">Hardware wallet</a>
+                </li>
+                <li>
+                  <a href="../reviews/index.htm">Reviews</a>
+                </li>
+                <li class="active">
+                  <a href="../security-features/index.htm">Security</a>
+                </li>
+                <li>
+                  <a href="/app/">App</a>
+                </li>
+                <li><a href="https://bitbox.shop/en/">Shop</a></li>
+                <li><a href="/blog/">Blog</a></li>
+                <li><a href="/support/">Support</a></li>
+                <li class="mobile-language-menu">
+                  <ul>
+                    <li><span class="mobile-language-menu-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewbox="0 0 24 24"><path d="M0 0h24v24H0z" fill="none"></path><path d=" M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" fill="#888"></path></svg></span></li>
+                    
+                    
+                    <li lang="en"><a class="active" href="index.htm">English</a></li>
+                    
+
+                    
+                    
+                    <li lang="de"><a href="/de/bitbox02/bedrohungsmodell/">Deutsch</a></li>
+                    
+
+                    
+                    
+                    <li lang="es"><a href="/es/bitbox02/modelado-de-amenazas/">Español</a></li>
+                    
+                  </ul>
+                </li>
+              </ul>
+            </div>
+            <ul class="mobile-icon">
+              <li>
+                <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="3" y1="12" x2="21" y2="12"></line>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+                <svg class="x-icon hide" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </li>
+            </ul>
+        </nav>
+      </div>
+    </div>
+
+    <section class="with-padding topFlat" id="hero">
+  <div class="content-width">
+    <div class="row center-xs">
+      <div class="col-xs-11 col-sm-10">
+        <div class="row center-xs">
+  <div class="col-xs-11 col-sm-7">
+    <img loading="lazy" class="bitbox-icon" src="../../assets/images/logos/DB_symbol_1024%401x.png" srcset="../../assets/images/logos/DB_symbol_1024%401x.png 1x, ../../assets/images/logos/DB_symbol_1024%402x.png 2x" alt="BitBox logo">
+  </div>
+</div>
+
+        <h1 class="title m-bottom-xlarge">
+          <span class="lab-bold">BitBox</span><span class="lab-regular">02</span>
+          <span class="lab-regular unbreak">threat model</span>
+        </h1>
+        <h2 class="heading-2" id="introduction">Introduction</h2>
+        <p class="info-lead text-center">
+          This page uses technical language and is primarily written for advanced users and security researchers.
+          For ordinary users, we recommend to first have a look at the
+          <a href="../security-features/index.htm">security&nbsp;features</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="with-padding bg-gray" id="toc">
+  <div class="content-width">
+    <div class="row">
+      <div class="col-xs-11 col-sm-10 col-xs-offset-1">
+
+        <h2 class="heading-2 m-bottom-large">Table of content</h2>
+
+        <ul class="info-lead squares m-left-xsmall m-bottom-none">
+          <li>
+            <a class="scrollto" href="#overview">Overview</a>
+            <ul class="info-lead squares m-left-xsmall m-bottom-none">
+              <li>
+                <a class="scrollto" href="#summary">Summary</a>
+              </li>
+              <li>
+                <a class="scrollto" href="#threat-model">Threat model</a>
+              </li>
+              <li class="m-bottom-none">
+                <a class="scrollto" href="#out-of-scope">Out of scope</a>
+              </li>
+            </ul>
+          </li>
+          <li class="m-bottom-none">
+            <a class="scrollto" href="#attack-vectors">Attack vectors and countermeasures</a>
+            <ul class="info-lead squares m-left-xsmall m-bottom-none">
+              <li>
+                <a class="scrollto" href="#device-attacks">Device attacks</a>
+              </li>
+              <li>
+                <a class="scrollto" href="#computer-attacks">Computer attacks</a>
+              </li>
+              <li>
+                <a class="scrollto" href="#services-attacks">Services attacks</a>
+              </li>
+              <li>
+                <a class="scrollto" href="#supply-chain-attacks">Supply chain attacks</a>
+              </li>
+              <li class="m-bottom-none">
+                <a class="scrollto" href="#user-attacks">User attacks</a>
+              </li>
+            </ul>
+          </li>
+        </ul>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="with-space-top" id="overview">
+  <div class="content-width">
+
+    <div class="row">
+      <div class="col-xs-12 col-sm-10 col-sm-offset-1">
+
+        <div class="row m-bottom">
+          <div class="col-xs-12">
+            <h2 class="heading-1">Overview</h2>
+          </div>
+        </div>
+
+        <div class="row m-bottom" id="summary">
+          <div class="col-xs-12">
+            <h3 class="heading-2">Summary</h3>
+            <p class="info-lead">
+              We designed both the hardware and the firmware of the BitBox02 from scratch based on all the learnings we gained from the BitBox01.
+              The BitBox02 features a secure chip, the ATECC608B, to harden the user-chosen device password, which encrypts the wallet seed stored on the MCU.
+              We do this by combining the device password on the secure chip with a key generated and stored on the secure chip and limit the number of key derivations with a monotonic counter enforced by the secure chip.
+              Once the seed on the MCU is decrypted, we do all cryptographic operations like BIP32 key derivation and ECDSA signing on the MCU with open source code that is fully auditable and can be built deterministically (more on this below).
+            </p>
+          </div>
+        </div>
+
+        <div class="row m-bottom" id="threat-model">
+          <div class="col-xs-12">
+            <h3 class="heading-2">Threat model</h3>
+            <p class="info-lead">
+              The BitBox02 is designed to protect you from attackers that
+              try to steal your funds (without using coercion),
+              make you lose funds (without getting it themselves)
+              or compromise your privacy without unlocking the device first, for example, by learning your transaction history.
+              In order to be secure, you should always trust the screen of your hardware wallet over the information displayed on your computer and verify carefully what is displayed on your hardware wallet.
+              The reason why you should buy and use a hardware wallet is to reduce your attack surface from a highly complex general purpose operating system with millions of lines of code and weak security domains to a security device built for a single purpose – namely to keep your private keys private – that only runs trusted code.
+              The only time you should side with your computer is when the BitBoxApp tells you that the device is not authentic or that the device did not follow the anti-klepto protocol (more information below).
+            </p>
+          </div>
+        </div>
+
+        <div class="row m-bottom" id="out-of-scope">
+          <div class="col-xs-12">
+            <h3 class="heading-2">Out of scope</h3>
+            <p class="info-lead">
+              There are no protections in place if an attacker gets access to both your device and your device password or to your backup.
+              In the latter case, however, you can enable an optional passphrase, which you have to enter every time you use your BitBox02.
+              This is an advanced feature that you use at your own risk (see below).
+              (If you forget or misremember your optional passphrase, your coins are lost and no one can help you.)
+              By gluing the casing to the PCB with epoxy, we try to make it difficult to tamper with the device.
+              However, if you unlock a tampered device with your device password, the attacker is likely to succeed.
+              Such targeted attacks are out of scope for the threat model of the BitBox02.
+              Please note that a lost or stolen device does not fall into this category.
+              The BitBox02 is designed to protect your assets in such cases.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="with-space-top" id="attack-vectors">
+  <div class="content-width">
+
+    <div class="row">
+      <div class="col-xs-12 col-sm-10 col-sm-offset-1">
+
+        <div class="row m-bottom">
+          <div class="col-xs-12">
+            <h2 class="heading-1">Attack vectors and countermeasures</h2>
+          </div>
+        </div>
+
+        <div class="row m-bottom" id="device-attacks">
+          <div class="col-xs-12">
+            <h3 class="heading-2">Device attacks</h3>
+
+            <h4 class="heading-3" id="firmware-bugs">Firmware bugs</h4>
+            <p class="info-lead">
+              The BitBox02 firmware can contain vulnerabilities such as buffer overflows, memory leaks and other unintended functionality, which could make the device exploitable from a compromised computer.
+              As countermeasures, we use stack smashing protection to prevent buffer overflows,
+              make as many memory areas as possible non-executable with the memory protection unit (MPU) of the MCU
+              and use two specific integer values to encode booleans.
+              Additionally, we lock the device down during factory setup by disabling debug interfaces to the MCU,
+              making the bootloader read-only and irreversibly configuring the secure chip.
+              Moreover, the firmware exposes its full API to the computer only after unlocking it with the device password.
+              (Only the device authenticity check takes place before that.)
+              In order to encourage reviews by independent security researchers and responsible disclosures of found vulnerabilities,
+              our firmware code is fully open-source and we run a bug bounty program.
+            </p>
+
+            <h4 class="heading-3" id="invasive-attacks">Invasive attacks</h4>
+            <p class="info-lead">
+              We assume that an attacker can decapsulate the MCU and read its memory or replace components such as the secure chip or MCU on the PCB after the user stopped using the device.
+              (As mentioned above, unlocking a tampered device is out of scope.)
+              The secure chip that we use (the ATECC608B) is designed in such a way that it should not be possible to read out its memory.
+              (Prior to the release of the ATECC608B chip, BitBox02 used the earlier
+              <a href="https://bitbox.swiss/blog/bitbox-05-2021-masnee-update/#check-your-secure-chip-variant">ATECC608A chip</a>.)
+              Since we combine information from the user (namely the device password), the MCU and the secure chip to decrypt the wallet seed, you are protected against invasive attacks on the MCU.
+              A monotonic counter on the secure chip prevents an attacker from brute-forcing the device password (see below).
+              In addition, the MCU and the secure chip authenticate and encrypt some of their communication with IO protection, encryption and auth keys generated during the factory setup.
+            </p>
+
+            <h4 class="heading-3" id="non-invasive-attacks">Non-invasive attacks</h4>
+            <p class="info-lead">
+              By analyzing the execution time, electromagnetic radiation or power consumption of the device, an attacker could learn sensitive information from the device, which is known as a side-channel attack.
+              We try to prevent this by using well known open-source cryptographic libraries, which run in constant time and were thoroughly reviewed, wherever possible.
+              Unfortunately, we didn’t have time yet to address the OLED power consumption side-channel vulnerability discovered by <a href="https://blog.inhq.net/posts/oled-side-channel-status-summary/" target="_blank" rel="noopener noreferrer">Christian Reitter</a> (also see the <a href="https://blog.trezor.io/details-of-the-oled-vulnerability-and-its-mitigation-d331c4e2001a" target="_blank" rel="noopener noreferrer">article by Trezor</a>).
+            </p>
+
+            <h4 class="heading-3" id="evil-maid-attacks">Evil maid attacks</h4>
+            <p class="info-lead">
+              An attacker can steal the device from you and modify or replace it before giving it back to you.
+              Unlike in case of the invasive attacks above, you interact with the tampered device.
+              As countermeasures, we sign a key generated on the device for each device during the factory setup and verify the authenticity of the device with the BitBoxApp before every use.
+              Moreover, since we encrypt the USB communication (more on this below) and both the device and the app remember the counterparty with which they were paired, having to re-pair should raise your suspicion that either your BitBox02 has been replaced or that your computer runs a malicious app.
+              The device itself is sealed with epoxy and each time before using it you should check it for signs of tampering.
+              However, with enough effort, evil maid attacks are feasible as explained above.
+            </p>
+
+            <h4 class="heading-3" id="brute-forcing">Brute-forcing</h4>
+            <p class="info-lead">
+              If an attacker gets access to your device, they can try to brute-force the device password you use to unlock your device.
+              By limiting the number of attempts both in the firmware and on the secure chip using its monotonic counter, which is increased for every unlocking and bricks the chip when brute-forcing, we try to make brute-forcing your device password as unlikely to succeed as possible.
+              In addition, each attempt requires a certain computational effort, which also makes brute-forcing harder by slowing down its execution.
+            </p>
+
+          </div>
+        </div>
+
+        <div class="row m-bottom" id="computer-attacks">
+          <div class="col-xs-12">
+            <h3 class="heading-2">Computer attacks</h3>
+
+            <h4 class="heading-3" id="malicious-app">Malicious app/computer</h4>
+            <p class="info-lead">
+              A compromised computer is the main attack vector that hardware wallets protect you against.
+              By replacing the stored app or by tricking the user to download a malicious app, an attacker can control whatever the app does and displays on the computer.
+              For this reason, you have to confirm all security-relevant actions on the device itself.
+              Since an attacker could record the keystrokes on your machine, you can only enter your device password on the BitBox02.
+              In order that you can verify that you downloaded the right app, we <a href="https://bitbox.swiss/download/">publish the hash</a> of the BitBoxApp and <a href="https://github.com/digitalbitbox/bitbox-wallet-app/releases/tag/v4.13.1">sign it</a>.
+            </p>
+
+            <h4 class="heading-3" id="malicious-usb">Malicious USB stack/connection</h4>
+            <p class="info-lead">
+              Certain operating systems like Qubes OS isolate the app from the USB stack.
+              If only the USB stack, some USB cable or hub is compromised but not the app itself, we protect your privacy by encrypting and authenticating the USB communication between the app and the firmware with the Noise_XX_25519_ChaChaPoly_SHA256 protocol from the Noise Protocol Framework.
+              Additionally, remembering the long-term keys on the device and the computer allows the firmware and the app to detect when the other endpoint changed.
+              The device currently can remember up to five pairings, after which the oldest is rotated out.
+              The out-of-band confirmation of the pairing code ensures that there is no man-in-the-middle.
+            </p>
+
+            <h4 class="heading-3" id="clipboard-hijacking">Clipboard hijacking</h4>
+            <p class="info-lead">
+              A malicious program can read the content of your clipboard and replace its content to a different receive address.
+              Such an attack is detrimental both when sending and receiving funds.
+              This is why you should always double-check with the original information after pasting an address.
+            </p>
+
+          </div>
+        </div>
+
+        <div class="row m-bottom" id="services-attacks">
+          <div class="col-xs-12">
+            <h3 class="heading-2">Services attacks</h3>
+
+            <h4 class="heading-3" id="compromised-server">Compromised server</h4>
+            <p class="info-lead">
+              A compromised server is a problem both for the security (e.g. wrong balance or exchange rates) and privacy (e.g. tracking IP addresses and transactions) of our users.
+              To reduce the risks, the BitBoxApp downloads all blockchain headers of Bitcoin and Litecoin, verifies the proof-of-work and then checks that all your coins exist with a method known as simplified payment verification (SPV).
+              The app also allows you to configure your own backend in order to be fully independent of Shift’s servers, also in case of a denial-of-service attack on our infrastructure.
+            </p>
+
+          </div>
+        </div>
+
+        <div class="row m-bottom" id="supply-chain-attacks">
+          <div class="col-xs-12">
+            <h3 class="heading-2">Supply chain attacks</h3>
+
+            <h4 class="heading-3" id="backdoored-entropy">Backdoored entropy</h4>
+            <p class="info-lead">
+              The firmware uses the true random number generators (TRNG) of the MCU and secure chip to generate the entropy of your wallet seed.
+              However, it’s impossible for us and for you to verify whether the generated randomness is truly random or whether it has been backdoored by the manufacturer.
+              This is why we combine the randomness of the two chips with randomness that we generate and store for each device during the factory setup, with randomness provided by your computer and with the entropy of your device password.
+              If you want to use a seed that has not been generated by our open-source firmware, you can import a seed that you generated yourself with either the BIP39 mnemonic import functionality or the microSD card backup recovery.
+            </p>
+
+            <h4 class="heading-3" id="device-shipping">Device shipping</h4>
+            <p class="info-lead">
+              The BitBox02 can get replaced or tampered with after it leaves the factory and before it reaches you.
+              It is absolutely crucial that you always set up your wallets yourself.
+              Otherwise, one of our employees or a reseller could ship to you a device initialized with a seed known to them.
+              In order to make fake devices and evil-maid attacks more difficult, we sign a key generated on the secure chip of each device during the factory setup.
+              The BitBox App then checks that it is connected to an authentic device produced and programmed by Shift Crypto with a challenge-response mechanism.
+            </p>
+
+            <h4 class="heading-3" id="malicious-firmware">Malicious firmware</h4>
+            <p class="info-lead">
+              In order to prevent that a reseller or a malicious app installs a malicious firmware on your device, each firmware version has to be signed by several engineers at Shift Crypto with no single point of failure.
+              Before accepting a new firmware, the bootloader on your device checks the signatures of the firmware before installing and running it.
+              However, some of our employees could try to inject a malicious bootloader.
+              By returning the hash of the bootloader from the firmware during the device authenticity check, we increase the complexity to pull this off.
+            </p>
+
+            <h4 class="heading-3" id="binary-intransparency">Binary intransparency</h4>
+            <p class="info-lead">
+              Shift Crypto might be forced by a state or a criminal organization to sign a malicious firmware and deliver it just to you.
+              We allow you to detect this by configuring the bootloader to always show the hash of the installed firmware before running it during booting, thereby further reducing the required trust in us.
+              The firmware itself can be built deterministically, which allows you to verify what you install before the installation.
+              If you do so, please consider contributing your verification to our repository so that other members of the community can take your word instead of ours (see the <a href="https://github.com/digitalbitbox/bitbox02-firmware/tree/master/releases">releases</a> for more information).
+            </p>
+
+            <h4 class="heading-3" id="nonce-covert-channel-attack">Exfiltration of secrets via a nonce covert channel</h4>
+            <p class="info-lead">
+              The BitBox02 supports the anti-klepto protocol to prevent exfiltration of secrets through the signatures it creates.
+              Read more details about it <a href="https://bitbox.swiss/blog/anti-klepto-explained-protection-against-leaking-private-keys/">here</a>.
+            </p>
+            <p class="info-lead">
+              The BitBox02 supports the anti-klepto protocol for ECDSA signatures created for the secp256k1 elliptic curve.
+              There is no support for this protocol for Schnorr signatures on secp256k1 (used by e.g. Taproot) and elliptic curves other than secp256k1.
+            </p>
+
+          </div>
+        </div>
+
+        <div class="row m-bottom-xlarge" id="user-attacks">
+          <div class="col-xs-12">
+            <h3 class="heading-2">User attacks</h3>
+
+            <h4 class="heading-3" id="misinformation">Misinformation</h4>
+            <p class="info-lead">
+              There is only so much we as Shift Crypto can do to protect your financial assets.
+              It is also up to you to properly inform and educate yourself and to not act naively.
+              Besides always trusting the screen of your BitBox02 over the one of your computer with the exception of the device authenticity check, you should always set up the device yourself and never give your device password or wallet backup to anyone else.
+              We will never ask you for your password, microSD card or mnemonic phrase and neither should anyone else.
+              Only rely on others for handling your BitBox if they are completely trustworthy (and you asked them to help you rather than the other way around).
+              Never accept unsolicited help for your cryptoassets.
+            </p>
+
+            <h4 class="heading-3" id="stolen-backup">Stolen backup</h4>
+            <p class="info-lead">
+              Anyone who has access to your wallet backup has access to all your funds unless an optional passphrase is set.
+              You can enable this advanced feature in the BitBoxApp, on the "Manage Device" page.<br>
+              If you enabled the optional passphrase feature: please note that any passphrase derives a valid wallet. If you forget the passphrase you used, no one can help you.
+              The passphrase is not part of the backup and in order to recover a wallet from a backup, both the backup itself and the passphrase is necessary.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="rightup with-space">
+  <div class="content-width">
+    <div class="row">
+      <div class="col-xs-12">
+        <div class="row">
+          <div class="col-xs-12">
+            <h2 class="heading-1 desktop-text-center">Read more</h2>
+          </div>
+        </div>
+      </div>
+    </div>
+    <link rel="stylesheet" href="../../css/blog-teaser-0139facca33f5ef05320497fae5f8224.css">
+    <section class="blog-teaser-feed">
+    <article class="post-card post ">
+
+    <a class="post-card-image-link" href="https://bitbox.swiss/blog/bitbox-02-2024-fletschhorn-update/">
+        <img class="post-card-image" srcset="../../blog/content/images/size/w300/2024/02/updateblog022024.png 300w,
+                    ../../blog/content/images/size/w600/2024/02/updateblog022024.png 600w,
+                    ../../blog/content/images/size/w1000/2024/02/updateblog022024.png 1000w,
+                    ../../blog/content/images/size/w2000/2024/02/updateblog022024.png 2000w" sizes="(max-width: 1000px) 400px, 700px" loading="lazy" src="../../blog/content/images/size/w600/2024/02/updateblog022024.png" alt="BitBox 02.2024 Fletschhorn update">
+        <span class="sr-only">BitBox 02.2024 Fletschhorn update</span>
+    </a>
+
+    <div class="post-card-content">
+
+        <a class="post-card-content-link" href="https://bitbox.swiss/blog/bitbox-02-2024-fletschhorn-update/">
+
+            <header class="post-card-header">
+                <h2 class="post-card-title">BitBox 02.2024 Fletschhorn update</h2>
+            </header>
+
+            <section class="post-card-excerpt">
+                    <p>The BitBox Fletschhorn update brings you support for a novel Bitcoin insurance, enhanced verifiable seed generation and self transfer validation.</p>
+            </section>
+
+        </a>
+
+        <footer class="post-card-meta">
+            <ul class="author-list">
+            </ul>
+            <div class="post-card-byline-content">
+                <span></span>
+                <span class="post-card-byline-date"><time datetime="2024-02-08">8 Feb 2024</time> <span class="bull">&bull;</span> 3 min read</span>
+            </div>
+        </footer>
+
+    </div>
+
+</article>
+    <article class="post-card post ">
+
+    <a class="post-card-image-link" href="https://bitbox.swiss/blog/bitbox-02-2024-fletschhorn-update-de/">
+        <img class="post-card-image" srcset="../../blog/content/images/size/w300/2024/02/updateblog022024-1.png 300w,
+                    ../../blog/content/images/size/w600/2024/02/updateblog022024-1.png 600w,
+                    ../../blog/content/images/size/w1000/2024/02/updateblog022024-1.png 1000w,
+                    ../../blog/content/images/size/w2000/2024/02/updateblog022024-1.png 2000w" sizes="(max-width: 1000px) 400px, 700px" loading="lazy" src="../../blog/content/images/size/w600/2024/02/updateblog022024-1.png" alt="BitBox 02.2024 Fletschhorn-Update">
+        <span class="sr-only">BitBox 02.2024 Fletschhorn-Update</span>
+    </a>
+
+    <div class="post-card-content">
+
+        <a class="post-card-content-link" href="https://bitbox.swiss/blog/bitbox-02-2024-fletschhorn-update-de/">
+
+            <header class="post-card-header">
+                <h2 class="post-card-title">BitBox 02.2024 Fletschhorn-Update</h2>
+            </header>
+
+            <section class="post-card-excerpt">
+                    <p>Das BitBox Fletschhorn-Update enthält Unterstützung für eine neuartige Bitcoin-Versicherung, eine verbesserte verifizierende Seed-Generierung und Validierung von Selbstüberweisungen.</p>
+            </section>
+
+        </a>
+
+        <footer class="post-card-meta">
+            <ul class="author-list">
+            </ul>
+            <div class="post-card-byline-content">
+                <span></span>
+                <span class="post-card-byline-date"><time datetime="2024-02-08">8 Feb 2024</time> <span class="bull">&bull;</span> 3 min read</span>
+            </div>
+        </footer>
+
+    </div>
+
+</article>
+    <article class="post-card post ">
+
+    <a class="post-card-image-link" href="https://bitbox.swiss/blog/die-erste-versicherung-fur-deine-eigenen-bitcoin/">
+        <img class="post-card-image" srcset="../../blog/content/images/size/w300/2024/02/bitbox-bitsurance-2to1-logos-1.jpg 300w,
+                    ../../blog/content/images/size/w600/2024/02/bitbox-bitsurance-2to1-logos-1.jpg 600w,
+                    ../../blog/content/images/size/w1000/2024/02/bitbox-bitsurance-2to1-logos-1.jpg 1000w,
+                    ../../blog/content/images/size/w2000/2024/02/bitbox-bitsurance-2to1-logos-1.jpg 2000w" sizes="(max-width: 1000px) 400px, 700px" loading="lazy" src="../../blog/content/images/size/w600/2024/02/bitbox-bitsurance-2to1-logos-1.jpg" alt="Die erste Versicherung für deine eigenen Bitcoin">
+        <span class="sr-only">Die erste Versicherung für deine eigenen Bitcoin</span>
+    </a>
+
+    <div class="post-card-content">
+
+        <a class="post-card-content-link" href="https://bitbox.swiss/blog/die-erste-versicherung-fur-deine-eigenen-bitcoin/">
+
+            <header class="post-card-header">
+                <h2 class="post-card-title">Die erste Versicherung für deine eigenen Bitcoin</h2>
+            </header>
+
+            <section class="post-card-excerpt">
+                    <p>BitBox geht eine Partnerschaft mit Bitsurance ein und präsentiert die erste Versicherung für selbst verwahrte Bitcoin.</p>
+            </section>
+
+        </a>
+
+        <footer class="post-card-meta">
+            <ul class="author-list">
+            </ul>
+            <div class="post-card-byline-content">
+                <span></span>
+                <span class="post-card-byline-date"><time datetime="2024-02-08">8 Feb 2024</time> <span class="bull">&bull;</span> 6 min read</span>
+            </div>
+        </footer>
+
+    </div>
+
+</article>
+</section>
+
+  </div>
+</section>
+
+
+    <footer class="footer rightup bottomFlat h-padding with-space" id="footer">
+      <div class="content-width">
+        <div class="row end-xs">
+          <div class="col-xs-12 col-sm-10 text-right">
+            <img loading="lazy" class="footer-logo" src="../../assets/images/logos/reversed_swiss_made.svg" alt="Swiss made open source">
+            <p class="meta">
+              <a href="/support/">Got questions? Contact us</a>.<br>
+              © 2024 Shift Crypto AG, Switzerland. All rights reserved.
+            </p>
+          </div>
+        </div>
+        <div class="row center-xs text-left">
+          <div class="footer-subnav text-left col-xs-12 col-sm-9 col-md-12">
+            <a class="m-right" href="/about/" translate="no">About</a>
+            <a class="m-right" href="/blog/" translate="no">Blog</a>
+            <a class="m-right" href="https://bitbox.shop/en/">Shop</a>
+            <a href="/jobs/" translate="no">Jobs</a>
+            <a class="m-left" target="_blank" rel="noopener noreferrer" href="https://bitbox.betteruptime.com/" translate="no">Status</a>
+            <a class="rss-button" href="../../blog/rss/index.htm" title="RSS" target="_blank">
+              <svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 24 24"><circle cx="6.18" cy="17.82" r="2.18"></circle><path d="M4 4.44v2.83c7.03 0 12.73 5.7 12.73 12.73h2.83c0-8.59-6.97-15.56-15.56-15.56zm0 5.66v2.83c3.9 0 7.07 3.17 7.07 7.07h2.83c0-5.47-4.43-9.9-9.9-9.9z"></path></svg>
+            </a>
+          </div>
+        </div>
+        <div class="row m-top-large center-xs text-left">
+          <div class="col-xs-4 col-sm-3 col-md-2 m-bottom">
+            <p class="footer-label meta">Partners</p>
+            <ul>
+              <li><a href="/buy/">Where to buy</a></li>
+              <li><a href="/reviewers/">Reviewers</a></li>
+              <li><a href="/dev/">Developer resources</a></li>
+              <li><a href="/bug-bounty-program/">Bug bounty program</a></li>
+              <li><a href="/affiliates/">Affiliate program</a></li>
+              <li><a href="/bitcoin/resources/">Bitcoin crash course</a></li>
+              <li><a href="../compare-hardware-wallets/index.htm">Wallet comparison</a></li>
+            </ul>
+          </div>
+          <div class="col-xs-4 col-sm-3 col-md-2 m-bottom">
+            <p class="footer-label meta">Products</p>
+            <ul translate="no">
+              
+              <li><a href="../index.htm">BitBox02</a></li>
+              <li><a href="/app/">BitBoxApp</a></li>
+              <li><a href="/base/">BitBoxBase</a></li>
+              <li><a href="/bitboxcare/">BitBoxCare</a></li>
+              <li><a href="/backupcard/">Backup card</a></li>
+              <li><a href="/steelwallet/">Steelwallet</a></li>
+              <li><a href="/tamper-evident-bags/">Tamper-evident bags</a></li>
+            </ul>
+          </div>
+          <div class="col-xs-4 col-sm-3 col-md-2 m-bottom">
+            <p class="footer-label meta">Policies</p>
+            <ul>
+              <li><a href="/policies/refund-policy/">Refund policy</a></li>
+              <li><a href="/policies/privacy-policy/">Privacy policy</a></li>
+              <li><a href="/policies/terms-of-service/">Terms of service</a></li>
+              <li><a href="/policies/limited-warranty/">Limited warranty</a></li>
+              <li><a href="/policies/shipping/">Shipping policy</a></li>
+              <li class="open-cookie-monster">
+                <button onclick="app.openCookieMonster();" type="button">Cookie settings&nbsp;🍪</button>
+              </li>
+            </ul>
+          </div>
+          <div class="col-xs-12 col-sm-9 col-md-5 col-md-offset-1">
+            <p class="footer-label meta">Platforms</p>
+            <div class="inline">
+              <a data-name="Twitter" data-category="Social" href="https://twitter.com/BitBoxSwiss" target="_blank" rel="noopener noreferrer">
+                <span class="sr-only">twitter.com/BitBoxSwiss</span>
+                <svg role="img" style="fill: white" width="24" height="24" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Twitter icon</title><path d="M23.954 4.569c-.885.389-1.83.654-2.825.775 1.014-.611 1.794-1.574 2.163-2.723-.951.555-2.005.959-3.127 1.184-.896-.959-2.173-1.559-3.591-1.559-2.717 0-4.92 2.203-4.92 4.917 0 .39.045.765.127 1.124C7.691 8.094 4.066 6.13 1.64 3.161c-.427.722-.666 1.561-.666 2.475 0 1.71.87 3.213 2.188 4.096-.807-.026-1.566-.248-2.228-.616v.061c0 2.385 1.693 4.374 3.946 4.827-.413.111-.849.171-1.296.171-.314 0-.615-.03-.916-.086.631 1.953 2.445 3.377 4.604 3.417-1.68 1.319-3.809 2.105-6.102 2.105-.39 0-.779-.023-1.17-.067 2.189 1.394 4.768 2.209 7.557 2.209 9.054 0 13.999-7.496 13.999-13.986 0-.209 0-.42-.015-.63.961-.689 1.8-1.56 2.46-2.548l-.047-.02z"></path></svg>
+
+              </a>
+              <a data-name="GitHub" data-category="Social" href="https://github.com/digitalbitbox" target="_blank" rel="noopener noreferrer">
+                <span class="sr-only">github.com/digitalbitbox</span>
+                <svg role="img" style="fill: white" width="24" height="24" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>GitHub icon</title><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"></path></svg>
+
+              </a>
+              <a data-name="YouTube" data-category="Social" href="https://www.youtube.com/@bitboxswiss " target="_blank" rel="noopener noreferrer">
+                <span class="sr-only">youtube.com/@bitboxswiss </span>
+                <svg role="img" style="fill: white" width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewbox="0 0 24 24"><title>YouTube icon</title><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"></path></svg>
+
+              </a>
+              <a data-name="Facebook" data-category="Social" href="https://www.facebook.com/BitBoxSwiss" target="_blank" rel="noopener noreferrer">
+                <span class="sr-only">facebook.com/BitBoxSwiss</span>
+                <svg style="fill: white" width="24" height="24" role="img" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Facebook icon</title><path d="M23.9981 11.9991C23.9981 5.37216 18.626 0 11.9991 0C5.37216 0 0 5.37216 0 11.9991C0 17.9882 4.38789 22.9522 10.1242 23.8524V15.4676H7.07758V11.9991H10.1242V9.35553C10.1242 6.34826 11.9156 4.68714 14.6564 4.68714C15.9692 4.68714 17.3424 4.92149 17.3424 4.92149V7.87439H15.8294C14.3388 7.87439 13.8739 8.79933 13.8739 9.74824V11.9991H17.2018L16.6698 15.4676H13.8739V23.8524C19.6103 22.9522 23.9981 17.9882 23.9981 11.9991Z"></path></svg>
+
+              </a>
+              <a data-name="LinkedIn" data-category="Social" href="https://www.linkedin.com/company/bitbox-swiss" target="_blank" rel="noopener noreferrer">
+                <span class="sr-only">linkedin.com/company/bitbox-swiss</span>
+                <svg role="img" style="fill: white" width="24" height="24" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>LinkedIn icon</title><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"></path></svg>
+
+              </a>
+              <a data-name="Instagram" data-category="Social" href="https://www.instagram.com/bitboxswiss/" target="_blank" rel="noopener noreferrer">
+                <span class="sr-only">instagram.com/bitboxswiss</span>
+                <svg role="img" style="fill: white" width="24" height="24" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Instagram icon</title><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678c-3.405 0-6.162 2.76-6.162 6.162 0 3.405 2.76 6.162 6.162 6.162 3.405 0 6.162-2.76 6.162-6.162 0-3.405-2.76-6.162-6.162-6.162zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405c0 .795-.646 1.44-1.44 1.44-.795 0-1.44-.646-1.44-1.44 0-.794.646-1.439 1.44-1.439.793-.001 1.44.645 1.44 1.439z"></path></svg>
+
+              </a>
+              <a data-name="Telegram" data-category="Social" href="/telegram/">
+                <span class="sr-only">Telegram group</span>
+                <svg role="img" style="fill: white" width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewbox="0 0 24 24"><title>Telegram icon</title><path d="M23.91 3.79L20.3 20.84c-.25 1.21-.98 1.5-2 .94l-5.5-4.07-2.66 2.57c-.3.3-.55.56-1.1.56-.72 0-.6-.27-.84-.95L6.3 13.7l-5.45-1.7c-1.18-.35-1.19-1.16.26-1.75l21.26-8.2c.97-.43 1.9.24 1.53 1.73z"></path></svg>
+
+              </a>
+              <a data-name="Reddit" data-category="Social" href="https://www.reddit.com/r/BitBoxWallet/" target="_blank" rel="noopener noreferrer">
+                <span class="sr-only">reddit.com/r/BitBoxWallet/</span>
+                <svg role="img" width="24" height="24" style="fill: white" xmlns="http://www.w3.org/2000/svg" viewbox="0 0 512 512">
+  <defs></defs>
+  <path d="M440.3 203.5c-15 0-28.2 6.2-37.9 15.9-35.7-24.7-83.8-40.6-137.1-42.3L293 52.3l88.2 19.8c0 21.6 17.6 39.2 39.2 39.2 22 0 39.7-18.1 39.7-39.7s-17.6-39.7-39.7-39.7c-15.4 0-28.7 9.3-35.3 22l-97.4-21.6c-4.9-1.3-9.7 2.2-11 7.1L246.3 177c-52.9 2.2-100.5 18.1-136.3 42.8-9.7-10.1-23.4-16.3-38.4-16.3-55.6 0-73.8 74.6-22.9 100.1-1.8 7.9-2.6 16.3-2.6 24.7 0 83.8 94.4 151.7 210.3 151.7 116.4 0 210.8-67.9 210.8-151.7 0-8.4-.9-17.2-3.1-25.1 49.9-25.6 31.5-99.7-23.8-99.7zM129.4 308.9c0-22 17.6-39.7 39.7-39.7 21.6 0 39.2 17.6 39.2 39.7 0 21.6-17.6 39.2-39.2 39.2-22 .1-39.7-17.6-39.7-39.2zm214.3 93.5c-36.4 36.4-139.1 36.4-175.5 0-4-3.5-4-9.7 0-13.7 3.5-3.5 9.7-3.5 13.2 0 27.8 28.5 120 29 149 0 3.5-3.5 9.7-3.5 13.2 0 4.1 4 4.1 10.2.1 13.7zm-.8-54.2c-21.6 0-39.2-17.6-39.2-39.2 0-22 17.6-39.7 39.2-39.7 22 0 39.7 17.6 39.7 39.7-.1 21.5-17.7 39.2-39.7 39.2z"></path>
+</svg>
+
+              </a>
+            </div>
+            <p class="footer-label meta m-top-large">Newsletter</p>
+            <ul>
+              <li>
+                <a href="/newsletter/" class="footer-inline-icon">
+                  <svg role="img" fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" height="24">
+  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+  <path d="m22 6-10 7L2 6"></path>
+</svg>
+                  Subscribe
+                </a>
+              </li>
+            </ul>
+            <div class="row m-top-large">
+              <div class="col-xs-8 p-right-none p-left-none">
+                <p class="meta m-top-none">Except where otherwise noted, content on this site is licensed under a  <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a></p>
+              </div>
+            </div>
+            <div class="row m-top-large">
+              <div class="col-md-10 p-right-none p-left-none">
+                <div>
+    <ul class="inline">
+      <li class="payment-icon">
+          <img loading="lazy" alt="bitcoin" src="../../assets/icons/payments/bitcoin.png">
+      </li>
+      <li class="payment-icon">
+          <img loading="lazy" alt="mastercard" src="../../assets/icons/payments/mastercard.png">
+      </li>
+      <li class="payment-icon">
+          <img loading="lazy" alt="visa" src="../../assets/icons/payments/visa.png">
+      </li>
+      <li class="payment-icon">
+          <img loading="lazy" alt="bancontact" src="../../assets/icons/payments/bancontact.png">
+      </li>
+      <li class="payment-icon">
+          <img loading="lazy" alt="ideal" src="../../assets/icons/payments/ideal.png">
+      </li>
+      <li class="payment-icon">
+          <img loading="lazy" alt="sofort" src="../../assets/icons/payments/sofort.png">
+      </li>
+      <li class="payment-icon">
+          <img loading="lazy" style="background-color:white" alt="bank-transfer" src="../../assets/icons/payments/bank.png">
+      </li>
+      <li class="payment-icon">
+          <img loading="lazy" alt="giropay" src="../../assets/icons/payments/giropay.png">
+      </li>
+      <li class="payment-icon">
+          <img loading="lazy" alt="eps" src="../../assets/icons/payments/eps.png">
+      </li>
+    </ul>
+</div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script type="text/plain-a">
+      ;(function() {
+        document.body.addEventListener('click', track);
+        document.body.addEventListener('contextmenu', track);
+
+        function formattedGtagAction(link) {
+          const parentWithID = link.closest('[id]');
+          const id = parentWithID ? parentWithID.getAttribute('id') : null;
+          const content = link.textContent;
+          const img = link.querySelector('img');
+          const text = (content ? content.trim() : null)
+            || link.getAttribute('title')
+            || (img ? img.getAttribute('alt') : null)
+            || '';
+          return location.pathname + (id ? '#' + id : '') + '(' + text + ')';
+        }
+
+        function track(e) {
+          const link = e.target.closest('a');
+          if (link) {
+            if ((link.dataset.name && link.dataset.category)) {
+              gtag('event', link.dataset.name, {
+                event_category: link.dataset.category,
+                event_label: removeUniqueParams(link.getAttribute('href'))
+              });
+            }
+            const url = new URL(link.getAttribute('href'), location);
+            switch(url.hostname) {
+              case 'bitbox.shop':
+                gtag('event', formattedGtagAction(link), {
+                  event_category: 'Shop',
+                  event_label: 'Link'
+                });
+                plausible('Shop', {
+                  props: {
+                    position: formattedGtagAction(link),
+                    event_label: 'Link',
+                    source_url: removeUniqueParams(location.href)
+                  }
+                });
+                break;
+              case 'shiftcrypto.support':
+                gtag('event', formattedGtagAction(link), {
+                  event_category: 'Support',
+                  event_label: 'Link'
+                });
+                plausible('Support', {
+                  props: {
+                    position: formattedGtagAction(link),
+                    event_label: 'Link',
+                    source_url: removeUniqueParams(location.href)
+                  }
+                });
+                break;
+              case 'bitbox.swiss': // ignore internal links
+                break;
+              default:
+                if (url.hostname !== location.hostname) {
+                  // track as outbound links
+                  gtag('event', formattedGtagAction(link), {
+                    event_category: 'Outbound',
+                    event_label: removeUniqueParams(url)
+                  });
+                  plausible('Outbound', {
+                    props: {
+                      position: formattedGtagAction(link),
+                      source_url: removeUniqueParams(location.href),
+                      target_url: removeUniqueParams(url)
+                    }
+                  });
+                }
+            }
+          }
+        }
+
+        var pattern = /^[0-9a-zA-Z-]{1,20}$/;
+        var ref = new URLSearchParams(location.search).get('ref');
+        if (ref && pattern.test(ref)) {
+          gtag('event', ref, {
+            event_category: 'Affiliate',
+            event_label: location.href
+          });
+          plausible('Affiliate', {
+            props: {
+              ref: ref,
+              target_url: removeUniqueParams(location.href),
+            }
+          });
+        }
+      })();
+    </script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // update all links to the shop with userID, ref and and UTM prams
+        var params = new URLSearchParams(location.search);
+        var ref = params.get('ref');
+        var refPattern = /^[0-9a-zA-Z-]{1,20}$/;
+        if (ref && refPattern.test(ref)) {
+          sessionStorage.setItem('ref', ref);
+        } else {
+          ref = sessionStorage.getItem('ref');
+        }
+        var utmId = params.get('utm_id');
+        var utmSource = params.get('utm_source');
+        var utmMedium = params.get('utm_medium');
+        var utmCampaign = params.get('utm_campaign');
+        var utmTerm = params.get('utm_term');
+        // max length of arbitrarly 72 chars per param seems enough, GA allows 2048 chars for total url length
+        var utmPattern = /^[0-9a-zA-Z-_.~]{1,72}$/; // only allow unreserved characters as param value
+        if (
+          (utmId || utmSource || utmMedium || utmCampaign || utmTerm) // at least 1 is truthy
+          && [utmId, utmSource, utmMedium, utmCampaign, utmTerm].every(function(value) {
+            return value === null || utmPattern.test(value) || console.warn('weird utm', value);
+          })
+        ) { // save if all are valid
+          localStorage.setItem('params', params.toString());
+        } else { // else take last stored utm params
+          var oldParams = new URLSearchParams(localStorage.getItem('params'));
+          utmId = oldParams.get('utm_id');
+          utmSource = oldParams.get('utm_source');
+          utmMedium = oldParams.get('utm_medium');
+          utmCampaign = oldParams.get('utm_campaign');
+          utmTerm = oldParams.get('utm_term');
+        }
+        // update all links to the shop
+        Array.from(document.querySelectorAll('a[href^="https://bitbox.shop/"]')).forEach(function(link) {
+          var url = new URL(link.href);
+          url.searchParams.set('u', window.gauid);
+          if (ref) {
+            url.searchParams.set('ref', ref);
+          }
+          if (utmId) { url.searchParams.set('utm_id', utmId); }
+          if (utmSource) { url.searchParams.set('utm_source', utmSource); }
+          if (utmMedium) { url.searchParams.set('utm_medium', utmMedium); }
+          if (utmCampaign) { url.searchParams.set('utm_campaign', utmCampaign); }
+          if (utmTerm) { url.searchParams.set('utm_term', utmTerm); }
+          link.setAttribute('href', url);
+        });
+      });
+    </script>
+
+    <script src="../../js/script-f9e70627472329153131508de174e026.js"></script>
+  <script>(function(){if (!document.body) return;var js = "window['__CF$cv$params']={r:'87979e068e743314',t:'MTcxMzk3NzY4OC4zMzAwMDA='};_cpo=document.createElement('script');_cpo.nonce='',_cpo.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js',document.getElementsByTagName('head')[0].appendChild(_cpo);";var _0xh = document.createElement('iframe');_0xh.height = 1;_0xh.width = 1;_0xh.style.position = 'absolute';_0xh.style.top = 0;_0xh.style.left = 0;_0xh.style.border = 'none';_0xh.style.visibility = 'hidden';document.body.appendChild(_0xh);function handler() {var _0xi = _0xh.contentDocument || _0xh.contentWindow.document;if (_0xi) {var _0xj = _0xi.createElement('script');_0xj.innerHTML = js;_0xi.getElementsByTagName('head')[0].appendChild(_0xj);}}if (document.readyState !== 'loading') {handler();} else if (window.addEventListener) {document.addEventListener('DOMContentLoaded', handler);} else {var prev = document.onreadystatechange || function () {};document.onreadystatechange = function (e) {prev(e);if (document.readyState !== 'loading') {document.onreadystatechange = prev;handler();}};}})();</script></body>
+</html>
